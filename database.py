@@ -4,6 +4,7 @@
 
 from os import environ 
 from config import Config
+import time
 import motor.motor_asyncio
 from pymongo import MongoClient
 
@@ -21,6 +22,13 @@ class Database:
         self.col = self.db.users
         self.nfy = self.db.notify
         self.chl = self.db.channels 
+        # Kept as its own collection (not reusing anything else here) so
+        # /member_forward's failure modes — missing/expired SESSION_STRING,
+        # userbot FloodWaits — stay fully isolated from every other feature.
+        # Each document is a BATCH of up to 100 message ids (not one per
+        # file) so scanning/enqueuing/dequeuing stays fast even for large
+        # channels — see plugins/member_forward.py.
+        self.mfq = self.db.member_forward_queue
         
     def new_user(self, id, name):
         return dict(
@@ -177,6 +185,58 @@ class Database:
     
     async def get_all_frwd(self):
        return self.nfy.find({})
+
+ #Dont Remove My Credit @Silicon_Bot_Update 
+#This Repo Is By @Silicon_Official 
+# For Any Kind Of Error Ask Us In Support Group @Silicon_Botz 
+
+    # ════════════════════════════════════════════════════════
+    #  Member-channel forward queue  (batch-per-document, for speed)
+    # ════════════════════════════════════════════════════════
+    async def ensure_member_forward_indexes(self):
+        await self.mfq.create_index([("status", 1), ("ts", 1)])
+        await self.mfq.create_index([("src", 1), ("dst", 1)])
+        await self.mfq.create_index([("session_id", 1)])
+
+    async def enqueue_member_forward_batches(self, batches: list):
+        """Bulk-insert many batch documents in a single call — this is the
+        scan-side speedup: one insert_many for e.g. 15 batches of 100 files
+        each, instead of 1500 individual inserts."""
+        if not batches:
+            return
+        now = time.time()
+        docs = [{**b, "status": "pending", "retries": 0, "ts": now} for b in batches]
+        await self.mfq.insert_many(docs)
+
+    async def member_forward_claim_one(self):
+        """Atomically claims the oldest pending batch and marks it
+        'processing'. Returns the claimed document or None."""
+        return await self.mfq.find_one_and_update(
+            {"status": "pending"},
+            {"$set": {"status": "processing", "started": time.time()}},
+            sort=[("ts", 1)],
+        )
+
+    async def member_forward_done(self, batch_id):
+        await self.mfq.delete_one({"_id": batch_id})
+
+    async def member_forward_retry(self, batch_id, delay: float):
+        await self.mfq.update_one(
+            {"_id": batch_id},
+            {"$set": {"status": "pending", "ts": time.time() + delay}, "$inc": {"retries": 1}},
+        )
+
+    async def member_forward_recover_stuck(self, timeout: int = 300):
+        cutoff = time.time() - timeout
+        r = await self.mfq.update_many(
+            {"status": "processing", "started": {"$lt": cutoff}},
+            {"$set": {"status": "pending"}},
+        )
+        return r.modified_count
+
+    async def member_forward_delete_session(self, session_id: str):
+        r = await self.mfq.delete_many({"session_id": session_id})
+        return r.deleted_count
        
  #Dont Remove My Credit @Silicon_Bot_Update 
 #This Repo Is By @Silicon_Official 
