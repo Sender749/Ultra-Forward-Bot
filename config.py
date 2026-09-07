@@ -17,6 +17,13 @@ class Config:
     FORCE_SUB_CHANNEL = environ.get("FORCE_SUB_CHANNEL", "https://t.me/+ulUxyWr94VkzZTE9") 
     FORCE_SUB_ON = environ.get("FORCE_SUB_ON", "True")
     PORT = environ.get('PORT', '8080')
+
+    # ── Member-channel forward (userbot) ─────────────────────────────────────
+    # Pyrogram session string for a personal Telegram account (NOT a bot).
+    # Powers /member_forward, which pulls files out of channels where this
+    # account is a member/admin but the BOT ITSELF was never added — the Bot
+    # API can never do that on its own. Leave empty to disable the feature.
+    SESSION_STRING = environ.get("SESSION_STRING", "BQHBa2AAB2Gkf7fVzKe7laAj3-sVJdoVgs7kdqElm_ivE4bUGIML4SNioZOtM_oBIk-Gal_oszjfAT7QIumIVsCMXVuyD0Gh29p1204DwCQ03-H28cieNGmi7-q75p0LETReT3xm54yhXKu1lfcpwu5eNMs9YeI9uPD2yeplb1ma3HyEFnTgJLSGXSR6Ww2EcNvVvum25FElPQlQ___oEdfTMygfTOmILhxkk3ehTTg1a0TrbfdGooam7-1eggRmFHw4kOQbjWRIvvVegOwlt-PZEfHYBviqr0KQftEAjSJ2pS6kvVM5qioOyGbSK8iIKraNBRp6SWv9JZpkDxyRagtMhQbtaAAAAAHGKGRSAA")
     
 #Dont Remove My Credit @Silicon_Bot_Update 
 #This Repo Is By @Silicon_Official 
@@ -32,4 +39,4 @@ class temp(object):
     
 #Dont Remove My Credit @Silicon_Bot_Update 
 #This Repo Is By @Silicon_Official 
-# For Any Kind Of Error Ask Us In Support Group @Silicon_Botz 
+# For Any Kind Of Error Ask Us In Support Group @Silicon_Botz
