@@ -13,6 +13,8 @@ from pyrogram.enums import ParseMode
 from pyrogram.errors import FloodWait 
 from aiohttp import web
 from plugins import web_server 
+from user_session import start_user_session, stop_user_session
+from plugins.member_forward import start_member_forward_workers
 
 #Dont Remove My Credit @Silicon_Bot_Update 
 #This Repo Is By @Silicon_Official 
@@ -47,6 +49,18 @@ class Bot(Client):
         self.username = me.username
         self.first_name = me.first_name
         self.set_parse_mode(ParseMode.DEFAULT)
+
+        # Optional userbot session for /member_forward (pulling files from
+        # channels this bot itself was never added to). No-op if
+        # SESSION_STRING isn't set — logs a warning, everything else starts
+        # normally either way.
+        await start_user_session()
+        await db.ensure_member_forward_indexes()
+        recovered = await db.member_forward_recover_stuck()
+        if recovered:
+            logging.info(f"[MF] Recovered {recovered} stuck member-forward batch(es)")
+        start_member_forward_workers(self)
+
         text = "<b>๏[-ิ_•ิ]๏ ʙᴏᴛ ʀᴇsᴛᴀʀᴛᴇᴅ !</b>"
         logging.info(text)
         success = failed = 0
@@ -75,6 +89,10 @@ class Bot(Client):
 # For Any Kind Of Error Ask Us In Support Group @Silicon_Botz 
     async def stop(self, *args):
         msg = f"@{self.username} stopped. Bye."
+        try:
+            await stop_user_session()
+        except Exception as e:
+            logging.warning(f"⚠️  stop_user_session() raised during shutdown: {e}")
         await super().stop()
         logging.info(msg)
 
@@ -83,4 +101,4 @@ app.run()
 
 #Dont Remove My Credit @Silicon_Bot_Update 
 #This Repo Is By @Silicon_Official 
-# For Any Kind Of Error Ask Us In Support Group @Silicon_Botz 
+# For Any Kind Of Error Ask Us In Support Group @Silicon_Botz
